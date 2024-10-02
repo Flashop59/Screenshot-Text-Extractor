@@ -1,19 +1,31 @@
 import os
 import re
-from PIL import Image, ImageDraw
-import pytesseract
+from PIL import Image
+from google.cloud import vision
 from openpyxl import Workbook
 import streamlit as st
 from io import BytesIO
 
-# Set tesseract_cmd to the correct location of the Tesseract executable (you can adjust this path based on your setup)
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'  # For Linux, or the appropriate path for your OS
-
-# Function to extract text from an image for a given crop area
+# Function to extract text from an image for a given crop area using Google Cloud Vision API
 def extract_text_from_image(image, crop_area):
+    client = vision.ImageAnnotatorClient()
+
+    # Convert the image crop to bytes
     cropped_image = image.crop(crop_area)
-    text = pytesseract.image_to_string(cropped_image, lang='eng')
-    return text.strip()
+    img_byte_arr = BytesIO()
+    cropped_image.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+
+    # Prepare image content for Vision API
+    vision_image = vision.Image(content=img_byte_arr)
+
+    # Perform text detection
+    response = client.text_detection(image=vision_image)
+    texts = response.text_annotations
+
+    if texts:
+        return texts[0].description.strip()
+    return ""
 
 # Function to extract the date from the filename using regex
 def extract_date_from_filename(filename):
@@ -22,15 +34,8 @@ def extract_date_from_filename(filename):
         return match.group(1)
     return None
 
-# Function to visualize the extraction areas on the image
-def visualize_extraction_areas(image, crop_areas):
-    draw = ImageDraw.Draw(image)
-    for area in crop_areas:
-        draw.rectangle(area, outline="red", width=3)  # Red rectangles for visualization
-    return image
-
 # Streamlit UI
-st.title("Screenshot Text Extraction to Excel")
+st.title("Screenshot Text Extraction to Excel (Google Vision)")
 
 # Upload files
 uploaded_files = st.file_uploader("Upload Screenshot Files", accept_multiple_files=True, type=["png", "jpg"])
@@ -52,10 +57,6 @@ if uploaded_files:
         (842, 1419, 996, 1474),   # Data 4
         (73, 1650, 218, 1731)     # Data 5
     ]
-
-    # Visualize the extraction areas on the sample image
-    visualized_image = visualize_extraction_areas(image.copy(), crop_areas)
-    st.image(visualized_image, caption="Visualization of Extraction Areas", use_column_width=True)
 
     # Process button
     if st.button("Process Screenshots and Download Excel"):
