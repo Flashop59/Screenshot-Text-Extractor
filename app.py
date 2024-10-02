@@ -6,6 +6,9 @@ from openpyxl import Workbook
 import streamlit as st
 from io import BytesIO
 
+# Set tesseract_cmd to the correct location of the Tesseract executable (you can adjust this path based on your setup)
+pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'  # For Linux, or the appropriate path for your OS
+
 # Function to extract text from an image for a given crop area
 def extract_text_from_image(image, crop_area):
     cropped_image = image.crop(crop_area)
