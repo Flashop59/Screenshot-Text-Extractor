@@ -1,5 +1,5 @@
 streamlit
-pytesseract
 pillow
 openpyxl
 tqdm
+google-cloud-vision
