@@ -1,5 +1,5 @@
-pytesseract
-Pillow
-openpyxl
 streamlit
-tesseract-ocr
+pytesseract
+pillow
+openpyxl
+tqdm
