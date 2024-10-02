@@ -1,5 +1,4 @@
-pytesseract
+streamlit
+easyocr
 Pillow
 openpyxl
-streamlit
-tesseract-ocr
