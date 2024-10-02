@@ -1,17 +1,29 @@
 import os
-import re
+import json
 from PIL import Image
 from google.cloud import vision
 from openpyxl import Workbook
 import streamlit as st
 from io import BytesIO
 
-# Function to extract text from an image for a given crop area using Google Cloud Vision API
-def extract_text_from_image(image, crop_area):
-    client = vision.ImageAnnotatorClient()
+# Load the Google Cloud credentials from the secret and save it as a file
+if 'GOOGLE_CLOUD_CREDENTIALS' in os.environ:
+    credentials_json = os.environ['GOOGLE_CLOUD_CREDENTIALS']
+    with open('google_credentials.json', 'w') as f:
+        f.write(credentials_json)
+    
+    # Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to point to the saved JSON
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'google_credentials.json'
 
-    # Convert the image crop to bytes
+# Initialize the Google Cloud Vision API client
+client = vision.ImageAnnotatorClient()
+
+# Function to extract text from an image for a given crop area using Google Vision API
+def extract_text_from_image(image, crop_area):
+    # Crop the image
     cropped_image = image.crop(crop_area)
+    
+    # Convert the image to bytes
     img_byte_arr = BytesIO()
     cropped_image.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
@@ -29,6 +41,7 @@ def extract_text_from_image(image, crop_area):
 
 # Function to extract the date from the filename using regex
 def extract_date_from_filename(filename):
+    import re
     match = re.search(r"(\d{4}-\d{2}-\d{2})", filename)
     if match:
         return match.group(1)
@@ -49,7 +62,7 @@ if uploaded_files:
     # Display sample image
     st.image(image, caption="Sample Screenshot", use_column_width=True)
 
-    # Define the crop areas
+    # Define the crop areas (adjust the pixel coordinates as needed)
     crop_areas = [
         (45, 29, 201, 72),        # Data 1
         (813, 877, 1011, 1000),   # Data 2
