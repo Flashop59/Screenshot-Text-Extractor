@@ -1,27 +1,31 @@
 import streamlit as st
 from PIL import Image
-import numpy as np
-from streamlit_drawable_canvas import st_canvas
 import pytesseract
+from streamlit_drawable_canvas import st_canvas
 from io import BytesIO
 from openpyxl import Workbook
 
 # Streamlit app title and description
-st.title("Image Annotation and Text Extraction")
-st.write("Upload an image, draw rectangles directly on it to select regions, and extract text from those regions.")
+st.title("Interactive Screenshot Text Extraction")
+st.write("Upload multiple images, draw rectangles on one image to select regions, and extract text from the selected regions across all images.")
 
-# File uploader to upload a single image
-uploaded_file = st.file_uploader("Upload an image file", type=["png", "jpg", "jpeg"])
+# File uploader to upload multiple images
+uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
 
-if uploaded_file:
-    # Open the uploaded image
-    image = Image.open(uploaded_file)
+if uploaded_files:
+    # Select the first image as a sample for drawing
+    image_file = uploaded_files[0]
+    image = Image.open(image_file)
+
+    # Display the first image
+    st.write("Use this image to draw the regions for text extraction")
+    st.image(image, caption="Uploaded Image", use_column_width=False)
+
+    # Get the image dimensions
     img_width, img_height = image.size
 
-    # Display the image
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-
     # Create a drawable canvas on top of the image
+    st.write("Draw rectangles on the image to select regions for text extraction")
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
         stroke_width=3,
@@ -34,36 +38,39 @@ if uploaded_file:
         key="canvas",
     )
 
-    # When rectangles are drawn, show the extract button
+    # Check if rectangles are drawn on the canvas
     if canvas_result.json_data is not None:
         rect_data = canvas_result.json_data["objects"]
 
         if len(rect_data) > 0:
-            st.write(f"You have drawn {len(rect_data)} rectangles. Click the button below to extract text.")
+            st.write(f"You have drawn {len(rect_data)} rectangles. The same regions will be used to extract text from all images.")
 
             # Button to start text extraction
-            if st.button("Extract Text from Selected Regions"):
+            if st.button("Extract Text from All Images and Save to Excel"):
                 wb = Workbook()
                 ws = wb.active
                 ws.title = "Extracted Data"
-                ws.append(["Rectangle Coordinates", "Extracted Text"])
+                ws.append(["Screenshot Name", "Rectangle Coordinates", "Extracted Text"])
 
-                # Process the image for text extraction
-                for rect in rect_data:
-                    # Get the coordinates from the drawn rectangle
-                    left = int(rect["left"])
-                    top = int(rect["top"])
-                    width = int(rect["width"])
-                    height = int(rect["height"])
+                # Process each uploaded image
+                for image_file in uploaded_files:
+                    image = Image.open(image_file)
 
-                    # Crop the region from the image
-                    cropped_image = image.crop((left, top, left + width, top + height))
+                    for rect in rect_data:
+                        # Get the coordinates from the drawn rectangle
+                        left = int(rect["left"])
+                        top = int(rect["top"])
+                        width = int(rect["width"])
+                        height = int(rect["height"])
 
-                    # Extract text from the cropped region using pytesseract
-                    extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
+                        # Crop the region from the image
+                        cropped_image = image.crop((left, top, left + width, top + height))
 
-                    # Append the results to the Excel sheet
-                    ws.append([f"{left},{top},{width},{height}", extracted_text])
+                        # Extract text from the cropped region using pytesseract
+                        extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
+
+                        # Append the results to the Excel sheet
+                        ws.append([image_file.name, f"{left},{top},{width},{height}", extracted_text])
 
                 # Save the workbook to a BytesIO stream for download
                 excel_output = BytesIO()
