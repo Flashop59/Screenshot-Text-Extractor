@@ -1,80 +1,80 @@
-import os
 import streamlit as st
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 import pytesseract
-from openpyxl import Workbook
-from tqdm import tqdm
+from streamlit_drawable_canvas import st_canvas
+import pandas as pd
 from io import BytesIO
+from openpyxl import Workbook
 
 # Streamlit app title and description
-st.title("Screenshot Text Extraction")
-st.write("Upload a folder containing images, and extract text from specific areas in each image into an Excel file.")
+st.title("Interactive Screenshot Text Extraction")
+st.write("Upload an image, draw rectangles on it to select regions, and extract text from the selected regions into an Excel file.")
 
-# Define the crop areas for text extraction
-crop_areas = [
-    (37, 26, 183, 75),        # First set of params (row 1)
-    (793, 833, 970, 915),     # Second set of params (row 2)
-    (787, 1215, 935, 1280),   # Third set of params (row 3)
-    (461, 1225, 597, 1277)    # Fourth set of params (row 4)
-]
-
-# Define the function to extract text from a cropped image
-def extract_text_from_image(image, crop_area):
-    cropped_image = image.crop(crop_area)
-    text = pytesseract.image_to_string(cropped_image, lang='eng')
-    return text.strip()
-
-# Preprocess image (convert to grayscale)
-def preprocess_image(image):
-    grayscale_image = image.convert("L")
-    return grayscale_image
-
-# Function to process a screenshot and extract data
-def process_screenshot(image, filename):
-    try:
-        # Convert image to grayscale and extract text for each crop area
-        preprocessed_image = preprocess_image(image)
-        extracted_data = [extract_text_from_image(preprocessed_image, area) for area in crop_areas]
-        return [filename, "Date Extracted"] + extracted_data
-    except UnidentifiedImageError:
-        st.warning(f"Error: Could not identify {filename}, skipping this file.")
-        return None
-
-# File upload
-uploaded_files = st.file_uploader("Upload images", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
+# File uploader to upload multiple images
+uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
 
 if uploaded_files:
-    st.info("Processing uploaded images...")
+    # Select the first image as a sample
+    image_file = uploaded_files[0]
+    image = Image.open(image_file)
+    
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Initialize a new workbook and sheet
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Extracted Data"
-    ws.append(["Screenshot Name", "Date", "Param1", "Param2", "Param3", "Param4"])
-
-    # Set up a progress bar
-    progress_bar = st.progress(0)
-    total_files = len(uploaded_files)
-
-    # Process each image file in the uploaded files
-    for i, uploaded_file in enumerate(uploaded_files):
-        image = Image.open(uploaded_file)
-        filename = uploaded_file.name
-        result = process_screenshot(image, filename)
-        if result:
-            ws.append(result)
-
-        # Update the progress bar
-        progress_bar.progress((i + 1) / total_files)
-
-    # Save the workbook to a BytesIO stream to download
-    excel_output = BytesIO()
-    wb.save(excel_output)
-    excel_output.seek(0)
-    st.success("Data extraction complete.")
-    st.download_button(
-        label="Download Excel File",
-        data=excel_output,
-        file_name="extracted_data.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    # Create a drawable canvas with an image as background
+    canvas_result = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
+        stroke_width=3,
+        stroke_color="#ff0000",
+        background_image=image,
+        update_streamlit=True,
+        height=image.size[1],
+        width=image.size[0],
+        drawing_mode="rect",  # You can only draw rectangles
+        key="canvas",
     )
+
+    # When rectangles are drawn, show the extract button
+    if canvas_result.json_data is not None:
+        st.write("Drawn rectangles data:", canvas_result.json_data)
+        
+        # Extract the drawn rectangles from the canvas
+        rect_data = canvas_result.json_data["objects"]
+        if len(rect_data) > 0:
+            st.write("You have drawn rectangles. Now, click the button to extract text.")
+
+            # Button to start text extraction
+            if st.button("Extract Text and Save to Excel"):
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Extracted Data"
+                ws.append(["Screenshot Name", "Rectangle Coordinates", "Extracted Text"])
+
+                # Iterate over drawn rectangles and extract text
+                for rect in rect_data:
+                    # Get the coordinates from the rectangle drawn on the canvas
+                    left = int(rect["left"])
+                    top = int(rect["top"])
+                    width = int(rect["width"])
+                    height = int(rect["height"])
+
+                    # Crop the region from the image
+                    cropped_image = image.crop((left, top, left + width, top + height))
+                    
+                    # Extract text from the cropped region using pytesseract
+                    extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
+
+                    # Append the results to the Excel sheet
+                    ws.append([image_file.name, f"{left},{top},{width},{height}", extracted_text])
+
+                # Save the workbook to a BytesIO stream for download
+                excel_output = BytesIO()
+                wb.save(excel_output)
+                excel_output.seek(0)
+
+                st.success("Text extraction complete. Download the Excel file below.")
+                st.download_button(
+                    label="Download Excel File",
+                    data=excel_output,
+                    file_name="extracted_text.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
