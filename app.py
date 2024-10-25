@@ -20,19 +20,19 @@ if uploaded_files:
     # Get the sample image size
     img_width, img_height = sample_image.size
 
-    # Display instructions for the user
-    st.write("Select areas by drawing rectangles on the sample image.")
+    # Set the background color to be transparent
+    st.write("Select areas by drawing rectangles on the sample image. The canvas and image are now aligned.")
 
     # Create a drawable canvas that perfectly overlaps with the sample image
     canvas_result = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
+        fill_color="rgba(255, 165, 0, 0.3)",  # Transparent fill for rectangles
         stroke_width=3,
         stroke_color="#ff0000",
-        background_image=sample_image,
+        background_image=sample_image,  # This overlays the image exactly on the canvas
         update_streamlit=True,
-        height=img_height,  # Match canvas height to sample image height
-        width=img_width,    # Match canvas width to sample image width
-        drawing_mode="rect",  # You can only draw rectangles
+        height=img_height,  # Match canvas height to the image height
+        width=img_width,    # Match canvas width to the image width
+        drawing_mode="rect",  # Drawing mode set to rectangles only
         key="canvas",
     )
 
