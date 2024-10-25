@@ -25,7 +25,11 @@ if uploaded_files:
     image_file = uploaded_files[0]
     image = Image.open(image_file)
 
-    # Convert PIL image to format suitable for canvas
+    # Display the first image
+    st.write("Use this image to draw the regions for text extraction")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    # Get the image dimensions
     img_width, img_height = image.size
 
     # Create a drawable canvas on top of the image
@@ -34,7 +38,7 @@ if uploaded_files:
         fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
         stroke_width=3,
         stroke_color="#ff0000",
-        background_image=image,  # Use the first image as the background
+        background_image=image,  # Use image as canvas background
         update_streamlit=True,
         height=img_height,  # Set canvas height to image height
         width=img_width,    # Set canvas width to image width
@@ -58,7 +62,7 @@ if uploaded_files:
 
                 # Process each uploaded image
                 for image_file in uploaded_files:
-                    pil_image = Image.open(image_file)
+                    image = Image.open(image_file)
 
                     for rect in rect_data:
                         left = int(rect["left"])
@@ -67,7 +71,7 @@ if uploaded_files:
                         height = int(rect["height"])
 
                         # Extract text from the specified region
-                        extracted_text = extract_text_from_image(pil_image, left, top, width, height)
+                        extracted_text = extract_text_from_image(image, left, top, width, height)
 
                         # Append the results to the Excel sheet
                         ws.append([image_file.name, f"{left},{top},{width},{height}", extracted_text])
