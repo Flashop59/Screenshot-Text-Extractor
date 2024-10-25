@@ -1,27 +1,25 @@
 import streamlit as st
 from PIL import Image
-import pytesseract
+import numpy as np
 from streamlit_drawable_canvas import st_canvas
+import pytesseract
 from io import BytesIO
 from openpyxl import Workbook
 
 # Streamlit app title and description
-st.title("Interactive Screenshot Text Extraction")
-st.write("Upload multiple images, draw rectangles on one image to select regions, and extract text from the selected regions across all images.")
+st.title("Image Annotation and Text Extraction")
+st.write("Upload an image, draw rectangles directly on it to select regions, and extract text from those regions.")
 
-# File uploader to upload multiple images
-uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
+# File uploader to upload a single image
+uploaded_file = st.file_uploader("Upload an image file", type=["png", "jpg", "jpeg"])
 
-if uploaded_files:
-    # Display the first image for drawing rectangles
-    image_file = uploaded_files[0]
-    image = Image.open(image_file)
-
-    # Display the image for selecting areas
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-
-    # Get the image dimensions
+if uploaded_file:
+    # Open the uploaded image
+    image = Image.open(uploaded_file)
     img_width, img_height = image.size
+
+    # Display the image
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
     # Create a drawable canvas on top of the image
     canvas_result = st_canvas(
@@ -41,42 +39,31 @@ if uploaded_files:
         rect_data = canvas_result.json_data["objects"]
 
         if len(rect_data) > 0:
-            st.write(f"You have drawn {len(rect_data)} rectangles. The same regions will be used to extract text from all images.")
+            st.write(f"You have drawn {len(rect_data)} rectangles. Click the button below to extract text.")
 
             # Button to start text extraction
-            if st.button("Extract Text from All Images and Save to Excel"):
+            if st.button("Extract Text from Selected Regions"):
                 wb = Workbook()
                 ws = wb.active
                 ws.title = "Extracted Data"
-                ws.append(["Screenshot Name", "Rectangle Coordinates", "Extracted Text"])
+                ws.append(["Rectangle Coordinates", "Extracted Text"])
 
-                # Process each uploaded image
-                for image_file in uploaded_files:
-                    try:
-                        image = Image.open(image_file)
-                    except Exception as e:
-                        st.error(f"Error opening {image_file.name}: {e}")
-                        continue
+                # Process the image for text extraction
+                for rect in rect_data:
+                    # Get the coordinates from the drawn rectangle
+                    left = int(rect["left"])
+                    top = int(rect["top"])
+                    width = int(rect["width"])
+                    height = int(rect["height"])
 
-                    for rect in rect_data:
-                        # Get the coordinates from the drawn rectangle
-                        left = int(rect["left"])
-                        top = int(rect["top"])
-                        width = int(rect["width"])
-                        height = int(rect["height"])
+                    # Crop the region from the image
+                    cropped_image = image.crop((left, top, left + width, top + height))
 
-                        # Crop the region from the image
-                        cropped_image = image.crop((left, top, left + width, top + height))
+                    # Extract text from the cropped region using pytesseract
+                    extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
 
-                        # Extract text from the cropped region using pytesseract
-                        try:
-                            extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
-                        except Exception as e:
-                            st.error(f"Error extracting text from {image_file.name}: {e}")
-                            extracted_text = "Error"
-
-                        # Append the results to the Excel sheet
-                        ws.append([image_file.name, f"{left},{top},{width},{height}", extracted_text])
+                    # Append the results to the Excel sheet
+                    ws.append([f"{left},{top},{width},{height}", extracted_text])
 
                 # Save the workbook to a BytesIO stream for download
                 excel_output = BytesIO()
