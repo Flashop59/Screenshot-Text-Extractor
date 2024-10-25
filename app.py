@@ -2,7 +2,6 @@ import streamlit as st
 from PIL import Image
 import pytesseract
 from streamlit_drawable_canvas import st_canvas
-import pandas as pd
 from io import BytesIO
 from openpyxl import Workbook
 
@@ -17,8 +16,12 @@ if uploaded_files:
     # Select the first image as a sample
     image_file = uploaded_files[0]
     image = Image.open(image_file)
-    
+
+    # Display the image
     st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    # Get the image size
+    img_width, img_height = image.size
 
     # Create a drawable canvas with an image as background
     canvas_result = st_canvas(
@@ -27,8 +30,8 @@ if uploaded_files:
         stroke_color="#ff0000",
         background_image=image,
         update_streamlit=True,
-        height=image.size[1],
-        width=image.size[0],
+        height=img_height,  # Match canvas height to image height
+        width=img_width,    # Match canvas width to image width
         drawing_mode="rect",  # You can only draw rectangles
         key="canvas",
     )
@@ -36,7 +39,7 @@ if uploaded_files:
     # When rectangles are drawn, show the extract button
     if canvas_result.json_data is not None:
         st.write("Drawn rectangles data:", canvas_result.json_data)
-        
+
         # Extract the drawn rectangles from the canvas
         rect_data = canvas_result.json_data["objects"]
         if len(rect_data) > 0:
