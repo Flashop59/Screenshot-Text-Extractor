@@ -7,41 +7,44 @@ from openpyxl import Workbook
 
 # Streamlit app title and description
 st.title("Interactive Screenshot Text Extraction")
-st.write("Upload images, draw rectangles on the sample image to select regions, and extract text from the selected regions for **all images** into an Excel file.")
+st.write("Upload multiple images, draw rectangles on one image to select regions, and extract text from the selected regions across all images.")
 
 # File uploader to upload multiple images
 uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
 
 if uploaded_files:
-    # Select the first image as a sample for rectangle selection
-    sample_image_file = uploaded_files[0]
-    sample_image = Image.open(sample_image_file)
+    # Display the first image for drawing rectangles
+    image_file = uploaded_files[0]
+    image = Image.open(image_file)
 
-    # Get the sample image size
-    img_width, img_height = sample_image.size
+    # Display the image for selecting areas
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Display instructions for the user
-    st.write("Draw rectangles directly on the sample image to select regions.")
+    # Get the image dimensions
+    img_width, img_height = image.size
 
-    # Create a drawable canvas that overlays directly on the sample image
+    # Create a drawable canvas on top of the image
     canvas_result = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)",  # Transparent fill for rectangles
+        fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
         stroke_width=3,
         stroke_color="#ff0000",
-        background_image=sample_image,  # This overlays the image exactly on the canvas
+        background_image=image,  # Use image as canvas background
         update_streamlit=True,
-        height=img_height,  # Match canvas height to the image height
-        width=img_width,    # Match canvas width to the image width
-        drawing_mode="rect",  # Drawing mode set to rectangles only
+        height=img_height,  # Set canvas height to image height
+        width=img_width,    # Set canvas width to image width
+        drawing_mode="rect",  # Restrict to drawing rectangles only
         key="canvas",
     )
 
-    # Check if any rectangles have been drawn on the canvas
+    # When rectangles are drawn, show the extract button
     if canvas_result.json_data is not None:
+        st.write("Drawn rectangles data:", canvas_result.json_data)
+
+        # Extract the drawn rectangles from the canvas
         rect_data = canvas_result.json_data["objects"]
 
         if len(rect_data) > 0:
-            st.write("You have drawn rectangles. Click the button to extract text from all uploaded images.")
+            st.write(f"You have drawn {len(rect_data)} rectangles. The same regions will be used to extract text from all images.")
 
             # Button to start text extraction
             if st.button("Extract Text from All Images and Save to Excel"):
@@ -54,9 +57,8 @@ if uploaded_files:
                 for image_file in uploaded_files:
                     image = Image.open(image_file)
 
-                    # Iterate over drawn rectangles and extract text
                     for rect in rect_data:
-                        # Get the coordinates from the rectangle drawn on the canvas
+                        # Get the coordinates from the first drawn rectangle
                         left = int(rect["left"])
                         top = int(rect["top"])
                         width = int(rect["width"])
@@ -64,7 +66,7 @@ if uploaded_files:
 
                         # Crop the region from the image
                         cropped_image = image.crop((left, top, left + width, top + height))
-                        
+
                         # Extract text from the cropped region using pytesseract
                         extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
 
