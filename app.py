@@ -7,7 +7,7 @@ from openpyxl import Workbook
 
 # Streamlit app title and description
 st.title("Interactive Screenshot Text Extraction")
-st.write("Upload images, draw rectangles on the sample image to select regions, and extract text from the selected regions for all images into an Excel file.")
+st.write("Upload images, view the image above, and draw rectangles on the canvas below to select regions for text extraction.")
 
 # File uploader to upload multiple images
 uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
@@ -20,15 +20,17 @@ if uploaded_files:
     # Get the sample image size
     img_width, img_height = sample_image.size
 
-    # Display the sample image
+    # Display the sample image above
     st.image(sample_image, caption="Sample Image for Selection", use_column_width=True)
 
-    # Create a drawable canvas with the sample image as background
+    st.write("Now draw the rectangles below corresponding to the areas you want to extract from the image:")
+
+    # Create a drawable canvas separately under the image
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
         stroke_width=3,
         stroke_color="#ff0000",
-        background_image=sample_image,
+        background_image=sample_image,  # Provide the same image for reference
         update_streamlit=True,
         height=img_height,  # Match canvas height to sample image height
         width=img_width,    # Match canvas width to sample image width
@@ -85,4 +87,3 @@ if uploaded_files:
                     file_name="extracted_text.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
-
