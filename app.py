@@ -20,10 +20,10 @@ if uploaded_files:
     # Get the sample image size
     img_width, img_height = sample_image.size
 
-    # Display the image with its exact dimensions to ensure perfect overlap
-    st.image(sample_image, caption="Sample Image for Selection", use_column_width=False, width=img_width)
+    # Display instructions for the user
+    st.write("Select areas by drawing rectangles on the sample image.")
 
-    # Create a drawable canvas with the sample image as background
+    # Create a drawable canvas that perfectly overlaps with the sample image
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
         stroke_width=3,
@@ -38,10 +38,8 @@ if uploaded_files:
 
     # Check if any rectangles have been drawn on the canvas
     if canvas_result.json_data is not None:
-        st.write("Drawn rectangles data:", canvas_result.json_data)
-
-        # Extract the drawn rectangles from the canvas
         rect_data = canvas_result.json_data["objects"]
+        
         if len(rect_data) > 0:
             st.write("You have drawn rectangles. Click the button to extract text from all uploaded images.")
 
