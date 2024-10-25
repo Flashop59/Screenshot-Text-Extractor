@@ -1,3 +1,17 @@
+import streamlit as st
+from PIL import Image
+import pytesseract
+from streamlit_drawable_canvas import st_canvas
+from io import BytesIO
+from openpyxl import Workbook
+
+# Streamlit app title and description
+st.title("Interactive Screenshot Text Extraction")
+st.write("Upload multiple images, draw rectangles on one image to select regions, and extract text from the selected regions across all images.")
+
+# File uploader to upload multiple images
+uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
+
 if uploaded_files:
     # Display the first image for drawing rectangles
     image_file = uploaded_files[0]
@@ -73,5 +87,6 @@ if uploaded_files:
                 st.download_button(
                     label="Download Excel File",
                     data=excel_output,
-                    file_name=f"extracted_text_{st.session_state.get('download_counter', 0)}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spread
+                    file_name="extracted_text.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
