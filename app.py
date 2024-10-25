@@ -7,7 +7,7 @@ from openpyxl import Workbook
 
 # Streamlit app title and description
 st.title("Interactive Screenshot Text Extraction")
-st.write("Upload images, view the image above, and draw rectangles on the canvas below to select regions for text extraction.")
+st.write("Upload images, and draw rectangles directly on the image to select regions for text extraction.")
 
 # File uploader to upload multiple images
 uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
@@ -20,25 +20,23 @@ if uploaded_files:
     # Get the sample image size
     img_width, img_height = sample_image.size
 
-    # Display the sample image above
-    st.image(sample_image, caption="Sample Image for Selection", use_column_width=True)
+    # Display the image above the canvas as a reference
+    st.image(sample_image, caption="Sample Image for Drawing", use_column_width=True)
 
-    st.write("Now draw the rectangles below corresponding to the areas you want to extract from the image:")
-
-    # Create a drawable canvas separately under the image
+    # Create a drawable canvas on the image itself
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",  # Fill color with transparency
         stroke_width=3,
         stroke_color="#ff0000",
-        background_image=sample_image,  # Provide the same image for reference
+        background_image=sample_image,  # Set the image as background for the canvas
         update_streamlit=True,
-        height=img_height,  # Match canvas height to sample image height
-        width=img_width,    # Match canvas width to sample image width
-        drawing_mode="rect",  # You can only draw rectangles
+        height=img_height,  # Match canvas height to image height
+        width=img_width,    # Match canvas width to image width
+        drawing_mode="rect",  # Only allow drawing rectangles
         key="canvas",
     )
 
-    # Check if any rectangles have been drawn on the canvas
+    # If there are rectangles drawn on the canvas
     if canvas_result.json_data is not None:
         st.write("Drawn rectangles data:", canvas_result.json_data)
 
