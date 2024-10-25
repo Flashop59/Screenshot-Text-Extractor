@@ -52,13 +52,20 @@ if uploaded_files:
     ws.title = "Extracted Data"
     ws.append(["Screenshot Name", "Date", "Param1", "Param2", "Param3", "Param4"])
 
+    # Set up a progress bar
+    progress_bar = st.progress(0)
+    total_files = len(uploaded_files)
+
     # Process each image file in the uploaded files
-    for uploaded_file in tqdm(uploaded_files, desc="Processing images", unit="image"):
+    for i, uploaded_file in enumerate(uploaded_files):
         image = Image.open(uploaded_file)
         filename = uploaded_file.name
         result = process_screenshot(image, filename)
         if result:
             ws.append(result)
+
+        # Update the progress bar
+        progress_bar.progress((i + 1) / total_files)
 
     # Save the workbook to a BytesIO stream to download
     excel_output = BytesIO()
