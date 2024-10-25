@@ -1,17 +1,3 @@
-import streamlit as st
-from PIL import Image
-import pytesseract
-from streamlit_drawable_canvas import st_canvas
-from io import BytesIO
-from openpyxl import Workbook
-
-# Streamlit app title and description
-st.title("Interactive Screenshot Text Extraction")
-st.write("Upload multiple images, draw rectangles on one image to select regions, and extract text from the selected regions across all images.")
-
-# File uploader to upload multiple images
-uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
-
 if uploaded_files:
     # Display the first image for drawing rectangles
     image_file = uploaded_files[0]
@@ -38,9 +24,6 @@ if uploaded_files:
 
     # When rectangles are drawn, show the extract button
     if canvas_result.json_data is not None:
-        st.write("Drawn rectangles data:", canvas_result.json_data)
-
-        # Extract the drawn rectangles from the canvas
         rect_data = canvas_result.json_data["objects"]
 
         if len(rect_data) > 0:
@@ -55,10 +38,14 @@ if uploaded_files:
 
                 # Process each uploaded image
                 for image_file in uploaded_files:
-                    image = Image.open(image_file)
+                    try:
+                        image = Image.open(image_file)
+                    except Exception as e:
+                        st.error(f"Error opening {image_file.name}: {e}")
+                        continue
 
                     for rect in rect_data:
-                        # Get the coordinates from the first drawn rectangle
+                        # Get the coordinates from the drawn rectangle
                         left = int(rect["left"])
                         top = int(rect["top"])
                         width = int(rect["width"])
@@ -68,7 +55,11 @@ if uploaded_files:
                         cropped_image = image.crop((left, top, left + width, top + height))
 
                         # Extract text from the cropped region using pytesseract
-                        extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
+                        try:
+                            extracted_text = pytesseract.image_to_string(cropped_image, lang='eng').strip()
+                        except Exception as e:
+                            st.error(f"Error extracting text from {image_file.name}: {e}")
+                            extracted_text = "Error"
 
                         # Append the results to the Excel sheet
                         ws.append([image_file.name, f"{left},{top},{width},{height}", extracted_text])
@@ -82,6 +73,5 @@ if uploaded_files:
                 st.download_button(
                     label="Download Excel File",
                     data=excel_output,
-                    file_name="extracted_text.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                    file_name=f"extracted_text_{st.session_state.get('download_counter', 0)}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spread
